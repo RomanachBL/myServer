@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-public class DynamicHandler implements HttpHandler {
+public class ThirdDynamicHandler implements HttpHandler {
 
 	public void handle(HttpExchange echange) throws IOException {
 		// "GET" ou "POST"
@@ -39,9 +39,10 @@ public class DynamicHandler implements HttpHandler {
 		this.parseQuery(query, parameters);
 
 		// send response
-		String response = "";
+		StringBuilder response = new StringBuilder("");
+		response.append("<h2>GET - Affichage des paramètres</h2><br>");
 		for (String key : parameters.keySet()) {
-			response += key + " = " + parameters.get(key) + "\n";
+			response.append("<span>"+key + " = " + parameters.get(key) + "</span><br>");
 		}
 		echange.sendResponseHeaders(200, response.length());
 		OutputStream os = echange.getResponseBody();
@@ -58,6 +59,7 @@ public class DynamicHandler implements HttpHandler {
 		InputStreamReader isr = new InputStreamReader(echange.getRequestBody(), "utf-8");
 		BufferedReader br = new BufferedReader(isr);
 		
+		// Disons qu'on capte du JSON
 		StringBuilder jsonBuilder = new StringBuilder();
 		String str;
 		
@@ -65,14 +67,14 @@ public class DynamicHandler implements HttpHandler {
 			jsonBuilder.append(str);                 
 		}
 		
-		// Disons qu'on capte du JSON
 		ObjectMapper objMapper = new ObjectMapper();
 		parametersMap = objMapper.readValue(jsonBuilder.toString(), new TypeReference<HashMap<String,Object>>(){});
 
 		// send response
-		String response = "";
+		StringBuilder response = new StringBuilder("");
+		response.append("<h2>POST - Affichage des paramètres</h2><br>");
 		for (String key : parametersMap.keySet()) {
-			response += key + " = " + parametersMap.get(key) + "\n";
+			response.append("<span>"+key + " = " + parametersMap.get(key) + "</span><br>");
 		}
 		echange.sendResponseHeaders(200, response.length());
 		OutputStream os = echange.getResponseBody();
@@ -92,11 +94,9 @@ public class DynamicHandler implements HttpHandler {
 				if (param.length > 0) {
 					key = URLDecoder.decode(param[0], System.getProperty("file.encoding"));
 				}
-
 				if (param.length > 1) {
 					value = URLDecoder.decode(param[1], System.getProperty("file.encoding"));
 				}
-
 				if (parameters.containsKey(key)) {
 					Object obj = parameters.get(key);
 					if (obj instanceof List<?>) {

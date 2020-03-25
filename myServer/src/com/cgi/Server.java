@@ -18,7 +18,7 @@ public class Server {
 		
 		HttpServer myServer = HttpServer.create(new InetSocketAddress(8080), 0);
 		
-		/********* Appel à myCoyote : Création de tous les contextes ************/
+		/********* myCoyote : Création de tous les contextes ************/
 		
 		listRequestObjects = myCoyoteService.getRequestObjectsFromSpringProject();
 		

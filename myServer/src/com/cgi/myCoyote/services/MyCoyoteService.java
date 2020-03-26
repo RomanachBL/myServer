@@ -39,11 +39,13 @@ public class MyCoyoteService {
 		}
 		
 		// 2e test : nous voulons renvoyer du code html
+		// TODO
 		for(RequestObject obj : listRequestObjects) {
 			myServer.createContext("/displayJSP"+obj.getRequest(), new SecDynamicHandler());
 		}
 		
 		// 2e test : nous voulons renvoyer du code html
+		// TODO
 		for(RequestObject obj : listRequestObjects) {
 			myServer.createContext("/displayServlet"+obj.getRequest(), new ThirdDynamicHandler());
 		}

@@ -32,54 +32,54 @@ public class ThirdDynamicHandler implements HttpHandler {
 	public void handleGET(HttpExchange echange) throws IOException {
 		System.out.println("Start handleGET");
 
-		// parse request
-		Map<String, Object> parameters = new HashMap<String, Object>();
-		URI requestedUri = echange.getRequestURI();
-		String query = requestedUri.getRawQuery();
-		this.parseQuery(query, parameters);
-
-		// send response
-		StringBuilder response = new StringBuilder("");
-		response.append("<h2>GET - Affichage des paramètres</h2><br>");
-		for (String key : parameters.keySet()) {
-			response.append("<span>"+key + " = " + parameters.get(key) + "</span><br>");
-		}
-		echange.sendResponseHeaders(200, response.length());
-		OutputStream os = echange.getResponseBody();
-		os.write(response.toString().getBytes());
-
-		os.close();
+//		// parse request
+//		Map<String, Object> parameters = new HashMap<String, Object>();
+//		URI requestedUri = echange.getRequestURI();
+//		String query = requestedUri.getRawQuery();
+//		this.parseQuery(query, parameters);
+//
+//		// send response
+//		StringBuilder response = new StringBuilder("");
+//		response.append("<h2>GET - Affichage des paramètres</h2><br>");
+//		for (String key : parameters.keySet()) {
+//			response.append("<span>"+key + " = " + parameters.get(key) + "</span><br>");
+//		}
+//		echange.sendResponseHeaders(200, response.length());
+//		OutputStream os = echange.getResponseBody();
+//		os.write(response.toString().getBytes());
+//
+//		os.close();
 	}
 
 	public void handlePOST(HttpExchange echange) throws IOException {
 		System.out.println("Start handlePOST");
 
-		// parse request
-		Map<String, Object> parametersMap = new HashMap<String, Object>();
-		InputStreamReader isr = new InputStreamReader(echange.getRequestBody(), "utf-8");
-		BufferedReader br = new BufferedReader(isr);
-		
-		// Disons qu'on capte du JSON
-		StringBuilder jsonBuilder = new StringBuilder();
-		String str;
-		
-		while ((str = br.readLine()) != null){
-			jsonBuilder.append(str);                 
-		}
-		
-		ObjectMapper objMapper = new ObjectMapper();
-		parametersMap = objMapper.readValue(jsonBuilder.toString(), new TypeReference<HashMap<String,Object>>(){});
-
-		// send response
-		StringBuilder response = new StringBuilder("");
-		response.append("<h2>POST - Affichage des paramètres</h2><br>");
-		for (String key : parametersMap.keySet()) {
-			response.append("<span>"+key + " = " + parametersMap.get(key) + "</span><br>");
-		}
-		echange.sendResponseHeaders(200, response.length());
-		OutputStream os = echange.getResponseBody();
-		os.write(response.toString().getBytes());
-		os.close();
+//		// parse request
+//		Map<String, Object> parametersMap = new HashMap<String, Object>();
+//		InputStreamReader isr = new InputStreamReader(echange.getRequestBody(), "utf-8");
+//		BufferedReader br = new BufferedReader(isr);
+//		
+//		// Disons qu'on capte du JSON
+//		StringBuilder jsonBuilder = new StringBuilder();
+//		String str;
+//		
+//		while ((str = br.readLine()) != null){
+//			jsonBuilder.append(str);                 
+//		}
+//		
+//		ObjectMapper objMapper = new ObjectMapper();
+//		parametersMap = objMapper.readValue(jsonBuilder.toString(), new TypeReference<HashMap<String,Object>>(){});
+//
+//		// send response
+//		StringBuilder response = new StringBuilder("");
+//		response.append("<h2>POST - Affichage des paramètres</h2><br>");
+//		for (String key : parametersMap.keySet()) {
+//			response.append("<span>"+key + " = " + parametersMap.get(key) + "</span><br>");
+//		}
+//		echange.sendResponseHeaders(200, response.length());
+//		OutputStream os = echange.getResponseBody();
+//		os.write(response.toString().getBytes());
+//		os.close();
 	}
 
 	// Permet de parser les paramètres envoyés

@@ -29,6 +29,7 @@ public class Server {
 		// Permet de retourner un getExecutor si le setExecutor existe.
 		myServer.setExecutor(null);
 		myServer.start();
+		
 		System.out.println("Serveur en écoute sur le port "+ myServer.getAddress().getPort());
 	}
 }

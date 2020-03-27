@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-public class SecDynamicHandler implements HttpHandler {
+public class SecDynamicHandler {
 
 	public void handle(HttpExchange echange) throws IOException {
 		// "GET" ou "POST"

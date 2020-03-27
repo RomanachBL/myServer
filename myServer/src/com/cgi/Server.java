@@ -1,35 +1,46 @@
 package com.cgi;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.ServerSocket;
+import java.net.Socket;
 
-import com.cgi.myCoyote.dtos.RequestObject;
 import com.cgi.myCoyote.services.MyCoyoteService;
-import com.sun.net.httpserver.HttpServer;
 
-public class Server {
+public class Server extends Thread {
+	
+	private Socket client = null;
+
+    public Server(Socket cl) {
+    	client = cl;
+    }
 	
 	private static MyCoyoteService myCoyoteService = new MyCoyoteService();
 	
 	public static void main(String[] args) throws IOException {
-		List<RequestObject> listRequestObjects = new ArrayList<RequestObject>();
+		int port = 8080;
 		
-		HttpServer myServer = HttpServer.create(new InetSocketAddress(8080), 0);
-		
+		// La queue de connexion prendra maximum 10 clients.
+		ServerSocket myServer = new ServerSocket(port, 10);
+
+		System.out.println("Serveur en écoute sur le port "+ myServer.getLocalPort());
+
+		/**
+		 * Une loop qui écoute en continu sur le port de notre serveur.
+		 * Un objet Server sera créé pour chaque client.
+		 */
+		while (true) {
+		    Socket connection = myServer.accept();
+		    Server httpServer = new Server(connection);
+		    httpServer.start();
+		}
+	}
+	
+	public void run() {
 		/********* myCoyote : Création de tous les contextes ************/
-		
-		listRequestObjects = myCoyoteService.getRequestObjectsFromSpringProject();
-		
-		myCoyoteService.createSpringProjectContexts(myServer, listRequestObjects);
-		
-		/*****************************************************/
-		
-		// Permet de retourner un getExecutor si le setExecutor existe.
-		myServer.setExecutor(null);
-		myServer.start();
-		
-		System.out.println("Serveur en écoute sur le port "+ myServer.getAddress().getPort());
+		try {
+			myCoyoteService.initCoyote(client);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

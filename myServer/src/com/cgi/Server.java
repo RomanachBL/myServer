@@ -17,7 +17,7 @@ public class Server extends Thread {
 	private static MyCoyoteService myCoyoteService = new MyCoyoteService();
 	
 	public static void main(String[] args) throws IOException {
-		int port = 8080;
+		int port = 9090;
 		
 		// La queue de connexion prendra maximum 10 clients.
 		ServerSocket myServer = new ServerSocket(port, 10);

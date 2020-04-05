@@ -71,6 +71,12 @@ public class MyCoyoteService {
 	 */
 	private void createSpringProjectContexts(Socket client, List<RequestObject> listRequestObjects) throws Exception {
 
+		String str = "";
+		StringBuilder headerBuilder = new StringBuilder();
+		String header = "";
+		StringTokenizer tokenizer = null;
+		String httpMethod = "";
+		String httpQuery = "";
 		String response = "";
 		boolean requestExist = false;
 		Map<String, String> mapParams = new HashMap<>();
@@ -78,21 +84,31 @@ public class MyCoyoteService {
 		inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 		outClient = new DataOutputStream(client.getOutputStream());
 
-		String requestString = inClient.readLine();
-		String headerLine = requestString;
-
-		// Si pas de header, on stop.
-		if (headerLine == null)
-			return;
+		/********* Récupération du header *********/
+		
+		headerBuilder.append(inClient.readLine()+"\r\n");
+		headerBuilder.append(inClient.readLine()+"\r\n");
+		
+		header = headerBuilder.toString();
 
 		// On récupère les infos du header
- 		StringTokenizer tokenizer = new StringTokenizer(headerLine);
-		String httpMethod = tokenizer.nextToken();
-		String httpQuery = tokenizer.nextToken();
+ 		tokenizer = new StringTokenizer(header);
+ 		// GET ou POST
+		httpMethod = tokenizer.nextToken();
+		// La query just après
+		httpQuery = tokenizer.nextToken();
 		
-		// On commence par regarder si la request existe dans le projet Spring.
+		// On rajoute le JSON si on est en méthode POST
+		if(httpMethod.equals("POST")) {
+			headerBuilder.append(inClient.readLine()+"\r\n");
+			header = headerBuilder.toString();
+		}
+		
+		/******************************************/
+		
+		// On commence par regarder si la request existe avec la methode correspondante.
 		for (RequestObject obj : listRequestObjects) {
-			if (httpQuery.startsWith(obj.getRequest()))
+			if (httpQuery.startsWith(obj.getRequest()) && httpMethod.equals(obj.getMethode()))
 				requestExist = true;
 		}
 
@@ -100,13 +116,13 @@ public class MyCoyoteService {
 		if (httpMethod.equals("GET"))
 			mapParams = parseGET(httpQuery);
 		else if (httpMethod.equals("POST"))
-			mapParams = parsePOST(inClient);
+			mapParams = parsePOST(header);
 
 		// Home page du serveur
 		if (httpQuery.equals("/")) {
 			response = rootHandler.handle(client);
 		} else if (httpQuery.equals("/displayHeader")) {
-			response = headerLine;
+			response = header;
 		}
 		// Si la request existe dans le projet Spring, on utilise un DynamicHandler
 		else if (requestExist == true) {
@@ -123,7 +139,7 @@ public class MyCoyoteService {
 			sendResponse(404, "<b>Erreur : requete non trouvée !</b>");
 		}
 
-		// On envoie finalement la réponse créé par le handler concerné.
+		// On envoie finalement la réponse créée par le handler concerné.
 		if (response != "" && response != null) {
 			sendResponse(200, response);
 		} else {
@@ -152,21 +168,15 @@ public class MyCoyoteService {
 		return paramMap;
 	}
 
-	public Map<String, String> parsePOST(BufferedReader bf) throws IOException {
+	public Map<String, String> parsePOST(String header) throws IOException {
 		
 		Map<String, String> paramMap = new HashMap<String, String>();
-		String str;
-		StringBuilder strB = new StringBuilder();
 		String json;
 		
-		while ((str = inClient.readLine()) != null){
-			strB.append(str);
-		}
+		int firstIndex = header.toString().indexOf("{");
+		int secIndex = header.toString().indexOf("}");
 		
-		int firstIndex = strB.toString().indexOf("{");
-		int secIndex = strB.toString().indexOf("}");
-		
-		json = strB.toString().substring(firstIndex, secIndex+1);
+		json = header.toString().substring(firstIndex, secIndex+1);
 		
 		ObjectMapper objMapper = new ObjectMapper();
 		paramMap = objMapper.readValue(json, new TypeReference<HashMap<String,String>>(){});
@@ -193,7 +203,7 @@ public class MyCoyoteService {
 		else
 			statusLine = Status.HTTP_404.toString() + "\r\n";
 
-		contentLengthLine = "Content-Length" + responseString.length() + "\r\n";
+		contentLengthLine = "Content-Length: " + responseString.length() + "\r\n";
 
 		outClient.writeBytes(statusLine);
 		outClient.writeBytes(serverdetails);

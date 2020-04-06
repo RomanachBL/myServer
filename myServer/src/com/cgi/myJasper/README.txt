@@ -1,0 +1,2 @@
+Jasper est le moteur de JSP (parse les JSP afin de les compiler en code JAVA en tant que servlets -> servlets gérées par Catalina). 
+Pendant son exécution, Jasper est capable de détecter et recompiler automatiquement les fichiers JSP modifiés.

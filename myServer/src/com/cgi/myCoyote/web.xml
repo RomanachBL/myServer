@@ -1,0 +1,33 @@
+<web-app>
+	<!-- Liste des servlets -->
+	<servlet>
+		<servlet-name>root</servlet-name>
+		<servlet-class>com.cgi.myCatalina.RootServlet</servlet-class>
+	</servlet>
+	
+	<servlet>
+		<servlet-name>displayHeader</servlet-name>
+		<servlet-class>com.cgi.myCatalina.DisplayHeaderServlet</servlet-class>
+	</servlet>
+	
+	<servlet>
+		<servlet-name>request</servlet-name>
+		<servlet-class>com.cgi.myCatalina.RequestServlet</servlet-class>
+	</servlet>
+		
+	<!-- Liste des mappings -->
+	<servlet-mapping>
+        <servlet-name>root</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>displayHeader</servlet-name>
+        <url-pattern>/displayHeader</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>request</servlet-name>
+        <url-pattern>/request</url-pattern>
+    </servlet-mapping>
+</web-app>

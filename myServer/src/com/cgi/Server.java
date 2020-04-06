@@ -38,7 +38,7 @@ public class Server extends Thread {
 	public void run() {
 		/********* myCoyote : Création de tous les contextes ************/
 		try {
-			myCoyoteService.initCoyote(client);
+			myCoyoteService.launchMyCoyote(client);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

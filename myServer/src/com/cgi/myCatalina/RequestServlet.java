@@ -1,11 +1,12 @@
-package com.cgi.myCoyote.handlers;
+package com.cgi.myCatalina;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.util.Map;
 
-public class FirstDynamicHandler {
+public class RequestServlet {
 
-	public String handle(Map<String, String> mapParams, String method) throws IOException {
+	public String exec(Socket client, String header, String method, Map<String, String> mapParams) throws IOException {
 		// send response
 		StringBuilder response = new StringBuilder("");
 		response.append("<h2>"+method+" - Affichage des paramètres</h2><br>");

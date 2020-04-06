@@ -46,12 +46,8 @@ public class Client {
 			} else if (racine.equals("n")) {
 				// Saisi de la query
 				System.out.println("--------------------------------");
-				System.out.println("Query ? (ne pas saisir '\\' ni les paramètres potentiels) \n");
-				System.out.println("Possibilités :");
-				System.out.println("- 'displayHeader'");
-				System.out.println("- 'reqGET'");
-				System.out.println("- 'reqPOST'");
-				System.out.println("- ou une du web.xml !\n");
+				System.out.println("Query ? (ne pas saisir '\\' ni les paramètres potentiels)");
+				System.out.println("Possibilités : une du web.xml !\n");
 				System.out.println("Votre réponse :");
 
 				query += input.nextLine();

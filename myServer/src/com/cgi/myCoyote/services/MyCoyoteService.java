@@ -2,8 +2,11 @@ package com.cgi.myCoyote.services;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,12 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import com.cgi.myCoyote.dtos.RequestObject;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+
+import com.cgi.myCoyote.dtos.Servlet;
+import com.cgi.myCoyote.dtos.ServletMapping;
+import com.cgi.myCoyote.dtos.WebAppObject;
 import com.cgi.myCoyote.enumerations.Status;
-import com.cgi.myCoyote.handlers.FirstDynamicHandler;
-import com.cgi.myCoyote.handlers.RootHandler;
-import com.cgi.myCoyote.handlers.SecDynamicHandler;
-import com.cgi.myCoyote.handlers.ThirdDynamicHandler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -25,121 +30,67 @@ public class MyCoyoteService {
 	private BufferedReader inClient = null;
 	private DataOutputStream outClient = null;
 
-	private static RootHandler rootHandler = new RootHandler();
-	private static FirstDynamicHandler firstDynamicHandler = new FirstDynamicHandler();
-	private static SecDynamicHandler secDynamicHandler = new SecDynamicHandler();
-	private static ThirdDynamicHandler thirdDynamicHandler = new ThirdDynamicHandler();
-
 	/**
-	 * Initialisation de myCoyote
+	 * Traite la requête qu'envoie le client.
 	 * 
 	 * @param client
 	 * @throws Exception
 	 */
-	public void initCoyote(Socket client) throws Exception {
-		List<RequestObject> listRequestObjects = new ArrayList<RequestObject>();
+	public void launchMyCoyote(Socket client) throws Exception {
 
-		// SIMULATION : récupération des @RequestMapping de Spring
-		listRequestObjects = getRequestObjectsFromSpringProject();
-
-		// Création des urls
-		createSpringProjectContexts(client, listRequestObjects);
-	}
-
-	/**
-	 * Permet de simuler la récupération des requêtes d'un projet Spring
-	 * 
-	 * @return une liste d'objets {@link RequestObject}
-	 */
-	private List<RequestObject> getRequestObjectsFromSpringProject() {
-		List<RequestObject> listRequestObjects = new ArrayList<RequestObject>();
-
-		RequestObject req1 = new RequestObject("/reqGET", "GET");
-		RequestObject req2 = new RequestObject("/reqPOST", "POST");
-		listRequestObjects.add(req1);
-		listRequestObjects.add(req2);
-
-		return listRequestObjects;
-	}
-
-	/**
-	 * Créer les contextes selon la requête qu'envoie le client.
-	 * 
-	 * @param client
-	 * @param listRequestObjects
-	 * @throws Exception
-	 */
-	private void createSpringProjectContexts(Socket client, List<RequestObject> listRequestObjects) throws Exception {
-
-		String str = "";
 		StringBuilder headerBuilder = new StringBuilder();
 		String header = "";
+		String servletClassName = "";
 		StringTokenizer tokenizer = null;
 		String httpMethod = "";
 		String httpQuery = "";
 		String response = "";
-		boolean requestExist = false;
 		Map<String, String> mapParams = new HashMap<>();
 
 		inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 		outClient = new DataOutputStream(client.getOutputStream());
 
 		/********* Récupération du header *********/
-		
-		headerBuilder.append(inClient.readLine()+"\r\n");
-		headerBuilder.append(inClient.readLine()+"\r\n");
-		
+
+		headerBuilder.append(inClient.readLine() + "\r\n");
+		headerBuilder.append(inClient.readLine() + "\r\n");
+
 		header = headerBuilder.toString();
 
 		// On récupère les infos du header
- 		tokenizer = new StringTokenizer(header);
- 		// GET ou POST
+		tokenizer = new StringTokenizer(header);
+		// GET ou POST
 		httpMethod = tokenizer.nextToken();
 		// La query just après
 		httpQuery = tokenizer.nextToken();
-		
+
 		// On rajoute le JSON si on est en méthode POST
-		if(httpMethod.equals("POST")) {
-			headerBuilder.append(inClient.readLine()+"\r\n");
+		if (httpMethod.equals("POST")) {
+			headerBuilder.append(inClient.readLine() + "\r\n");
 			header = headerBuilder.toString();
 		}
-		
-		/******************************************/
-		
-		// On commence par regarder si la request existe avec la methode correspondante.
-		for (RequestObject obj : listRequestObjects) {
-			if (httpQuery.startsWith(obj.getRequest()) && httpMethod.equals(obj.getMethode()))
-				requestExist = true;
-		}
 
-		// Puis on récupère les paramètres (que ce soit en GET ou en POST).
+		/******************************************/
+
+		// On récupère les paramètres (que ce soit en GET ou en POST).
 		if (httpMethod.equals("GET"))
 			mapParams = parseGET(httpQuery);
 		else if (httpMethod.equals("POST"))
 			mapParams = parsePOST(header);
 
-		// Home page du serveur
-		if (httpQuery.equals("/")) {
-			response = rootHandler.handle(client);
-		} else if (httpQuery.equals("/displayHeader")) {
-			response = header;
-		}
-		// Si la request existe dans le projet Spring, on utilise un DynamicHandler
-		else if (requestExist == true) {
-			response = firstDynamicHandler.handle(mapParams, httpMethod);
+		// On récupère le nom de la classe servlet (venant du web.xml)
+		servletClassName = getServletClassFromWebXml(httpQuery);
 
-			/*
-			 * TODO : 
-			 * response = secDynamicHandler.handle(client, httpMethod);
-			 * response = thirdDynamicHandler.handle(client, httpMethod);
-			 */
+		// Si on a trouvé une Servlet, on l'exécute
+		if (servletClassName != null && servletClassName != "") {
+			response = invokeServlet(servletClassName, client, header, httpMethod, mapParams);
 		}
-		// Sinon, erreur !!
+		// Si on n'a pas de servletClassName -> 404
 		else {
 			sendResponse(404, "<b>Erreur : requete non trouvée !</b>");
 		}
 
-		// On envoie finalement la réponse créée par le handler concerné.
+		// On envoie finalement la réponse créée par la servlet concerné.
 		if (response != "" && response != null) {
 			sendResponse(200, response);
 		} else {
@@ -147,6 +98,13 @@ public class MyCoyoteService {
 		}
 	}
 
+	/**
+	 * Parse les params si on a un GET
+	 * 
+	 * @param request
+	 * @return Map<String, String> des paramètres
+	 * @throws IOException
+	 */
 	public Map<String, String> parseGET(String request) throws IOException {
 		Map<String, String> paramMap = new HashMap<String, String>();
 		String paramStr = "";
@@ -168,20 +126,126 @@ public class MyCoyoteService {
 		return paramMap;
 	}
 
+	/**
+	 * Parse les params si on a un POST
+	 * 
+	 * @param header
+	 * @return Map<String, String> des paramètres
+	 * @throws IOException
+	 */
 	public Map<String, String> parsePOST(String header) throws IOException {
-		
+
 		Map<String, String> paramMap = new HashMap<String, String>();
 		String json;
-		
+
 		int firstIndex = header.toString().indexOf("{");
 		int secIndex = header.toString().indexOf("}");
-		
-		json = header.toString().substring(firstIndex, secIndex+1);
-		
+
+		json = header.toString().substring(firstIndex, secIndex + 1);
+
 		ObjectMapper objMapper = new ObjectMapper();
-		paramMap = objMapper.readValue(json, new TypeReference<HashMap<String,String>>(){});
-		
+		paramMap = objMapper.readValue(json, new TypeReference<HashMap<String, String>>() {
+		});
+
 		return paramMap;
+	}
+
+	/**
+	 * Regarde dans le web.xml et récupère la servlet correspondant à la requête
+	 * http que l'on reçoit
+	 * 
+	 * @param query
+	 * @return String - le nom de la class servlet (de la forme
+	 *         com.cgi.myCatalina.leNomDeLaServletClass).
+	 * @throws ClassNotFoundException
+	 */
+	private String getServletClassFromWebXml(String query) throws ClassNotFoundException {
+
+		String request = "";
+		String servletName = "";
+		String servletClass = "";
+		JAXBContext jaxbContext;
+		Unmarshaller jaxbUnmarshaller = null;
+		WebAppObject webAppObj = null;
+		List<ServletMapping> servletMappingList = new ArrayList<ServletMapping>();
+		List<Servlet> servletList = new ArrayList<Servlet>();
+
+		if (query.contains("?")) {
+			int index = query.indexOf("?");
+			request = query.substring(0, index);
+		} else {
+			request = query;
+		}
+
+		try {
+			File xmlFile = new File(System.getProperty("user.dir") + "/src/com/cgi/myCoyote/web.xml");
+
+			// On récupère le web.xml dans l'objet 'WebAppObject'
+			jaxbContext = JAXBContext.newInstance(WebAppObject.class);
+			jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+			webAppObj = (WebAppObject) jaxbUnmarshaller.unmarshal(xmlFile);
+
+		} catch (JAXBException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		// Puis on parcourt les 'ServletMapping' pour retrouver la bonne servletClass
+		// dans l'objet 'Servlet'
+		servletMappingList = webAppObj.getServletMappings();
+		servletList = webAppObj.getServlets();
+
+		for (ServletMapping sMap : servletMappingList) {
+			// TODO :
+			// A remplacer par une regex pour les cas ' /toto/* ' par exemple
+			if (request.equals(sMap.getUrlPattern())) {
+				servletName = sMap.getServletName();
+			}
+		}
+
+		if (servletName != null && servletName != "") {
+			for (Servlet s : servletList) {
+				if (servletName.equals(s.getServletName())) {
+					servletClass = s.getServletClass();
+				}
+			}
+		}
+
+		return servletClass;
+	}
+
+	/**
+	 * Permet d'exécuter une servlet
+	 * 
+	 * @param servletClassName
+	 * @param client
+	 * @param header
+	 * @param httpMethod
+	 * @param mapParams
+	 * @return
+	 */
+	public String invokeServlet(String servletClassName, Socket client, String header, String httpMethod,
+			Map<String, String> mapParams) {
+		
+		String response = "";
+		Class<?> servletClass;
+		
+		try {
+			servletClass = Class.forName(servletClassName);
+
+			Object servletInstance = servletClass.newInstance();
+
+			Method execMethod = servletInstance.getClass().getMethod("exec", Socket.class, String.class, String.class, Map.class);
+
+			response = (String) execMethod.invoke(servletInstance, client, header, httpMethod, mapParams);
+			
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException
+				| SecurityException | IllegalArgumentException | InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return response;
 	}
 
 	/**

@@ -1,17 +1,22 @@
 package com.cgi;
 
+import java.awt.Desktop;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.Socket;
-import java.awt.Desktop;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
+import java.net.URL;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -71,16 +76,15 @@ public class Client {
 	
 					// Saisi de la méthode GET/POST
 					System.out.println("--------------------------------");
-					System.out.println("GET ou POST (1/2) \n");
-					System.out.println("1 - GET");
-					System.out.println("2 - POST\n");
+					System.out.println("GET ou POST \n");
 					System.out.println("Votre réponse :");
 	
-					int methodRes = input.nextInt();
-					if (methodRes == 1)
+					String methodRes = input.nextLine();
+					if (methodRes.equalsIgnoreCase("get"))
 						sendGetResponse(socket, query, params);
-					if (methodRes == 2)
+					if (methodRes.equalsIgnoreCase("post"))
 						sendPostResponse(socket, query, params);
+					
 				}
 			} else {
 				System.out.println("Erreur de saisi ...");
@@ -93,7 +97,7 @@ public class Client {
 		System.out.println("\n---------- FIN ----------\n");
 	}
 
-	public static void sendGetResponse(Socket socket, String query, LinkedHashMap<String, String> params)
+	private static void sendGetResponse(Socket socket, String query, LinkedHashMap<String, String> params)
 			throws IOException {
 
 		// On build rapidement la query
@@ -136,15 +140,12 @@ public class Client {
 
 		System.out.println("\nRéponse du serveur : \n");
 		System.out.println(content);
+		
+		seeInBrowser(content);
 
-		// Ouverture du browser
-//					if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-//						URI uri = new URI();
-//						Desktop.getDesktop().browse(uri);
-//					}
 	}
 
-	public static void sendPostResponse(Socket socket, String query, LinkedHashMap<String, String> params)
+	private static void sendPostResponse(Socket socket, String query, LinkedHashMap<String, String> params)
 			throws IOException {
 
 		ObjectMapper om = new ObjectMapper();
@@ -181,11 +182,50 @@ public class Client {
 
 		System.out.println("\nRéponse du serveur : \n");
 		System.out.println(content);
+		
+		seeInBrowser(content);
 
 		// Ouverture du browser
 //					if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
 //						URI uri = new URI();
 //						Desktop.getDesktop().browse(uri);
 //					}
+		
+	}
+	
+	private static void seeInBrowser(String httpContent) {
+		int firstIndex;
+		int secIndex;
+		String html = "";
+		OutputStream os = null;
+		
+		// On récupère le HTML dans la réponse du serveur
+		firstIndex = httpContent.indexOf("¤");
+		secIndex = httpContent.lastIndexOf("¤");
+		html = httpContent.substring(firstIndex + 1, secIndex);
+		
+		try {
+			if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+				File tempFile = new File(System.getProperty("user.dir") + "/src/resources/tmp/result.html");
+				
+				// On écrit dans le fichier temporaire
+				os = new FileOutputStream(tempFile);
+				os.write(html.getBytes(), 0, html.length());
+				// Obligé de fermer le stream pour pouvoir delete le fichier.
+				os.close();
+				
+				// On l'ouvre dans le browser
+				Desktop.getDesktop().open(tempFile);
+				
+				// On doit effectuer un léger 'sleep' pour fermer le fichier car sinon
+				// il sera delete avant de s'ouvrir dans le browser.
+				TimeUnit.SECONDS.sleep(1);
+				if (tempFile.exists()) {
+					tempFile.delete();
+				}
+			}
+		} catch (IOException | InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }

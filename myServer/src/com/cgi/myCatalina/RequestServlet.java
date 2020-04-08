@@ -13,6 +13,6 @@ public class RequestServlet {
 		for (String key : mapParams.keySet()) {
 			response.append("<span>" + key + " = " + mapParams.get(key) + "</span><br>");
 		}
-		return response.toString();
+		return "¤"+response.toString()+"¤";
 	}
 }

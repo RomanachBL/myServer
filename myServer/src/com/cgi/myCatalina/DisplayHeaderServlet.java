@@ -8,7 +8,7 @@ public class DisplayHeaderServlet {
 	
 	public String exec(Socket client, String header, String method, Map<String, String> mapParams) throws IOException {
 		
-		return header;
+		return "¤"+header+"¤";
 		
 	}
 }

@@ -1,0 +1,1 @@
+Dossier temp qui va recevoir temporairement un result.html (la réponse du serveur).

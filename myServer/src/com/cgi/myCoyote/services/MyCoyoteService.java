@@ -40,7 +40,7 @@ public class MyCoyoteService {
 
 		StringBuilder headerBuilder = new StringBuilder();
 		String header = "";
-		String servletClassName = "";
+		String webXmlResult = "";
 		StringTokenizer tokenizer = null;
 		String httpMethod = "";
 		String httpQuery = "";
@@ -79,13 +79,20 @@ public class MyCoyoteService {
 			mapParams = parsePOST(header);
 
 		// On récupère le nom de la classe servlet (venant du web.xml)
-		servletClassName = getServletClassFromWebXml(httpQuery);
-
-		// Si on a trouvé une Servlet, on l'exécute
-		if (servletClassName != null && servletClassName != "") {
-			response = invokeServlet(servletClassName, client, header, httpMethod, mapParams);
+		webXmlResult = getServletFromWebXml(httpQuery);
+		
+		// Si on a trouvé un resultat, on l'exécute
+		if (webXmlResult != null && webXmlResult != "") {
+			// Si c'est une servlet, on invoke la servlet correspondante
+			if(webXmlResult.startsWith("com.cgi.myCatalina")) {
+				response = invokeServlet(webXmlResult, client, header, httpMethod, mapParams);
+			}
+			// Si c'est une JSP, on invoke le parseur de JSP correspondant
+			else if (webXmlResult.startsWith("/src/resources/jsp")) {
+				response = invokeServletWithJsp(webXmlResult, client, header, httpMethod, mapParams);
+			}
 		}
-		// Si on n'a pas de servletClassName -> 404
+		// Si on n'a pas de webXmlResult -> 404
 		else {
 			sendResponse(404, "<b>Erreur : requete non trouvée !</b>");
 		}
@@ -159,11 +166,12 @@ public class MyCoyoteService {
 	 *         com.cgi.myCatalina.leNomDeLaServletClass).
 	 * @throws ClassNotFoundException
 	 */
-	private String getServletClassFromWebXml(String query) throws ClassNotFoundException {
+	private String getServletFromWebXml(String query) throws ClassNotFoundException {
 
 		String request = "";
 		String servletName = "";
 		String servletClass = "";
+		String jspPath = "";
 		JAXBContext jaxbContext;
 		Unmarshaller jaxbUnmarshaller = null;
 		WebAppObject webAppObj = null;
@@ -206,12 +214,19 @@ public class MyCoyoteService {
 		if (servletName != null && servletName != "") {
 			for (Servlet s : servletList) {
 				if (servletName.equals(s.getServletName())) {
-					servletClass = s.getServletClass();
+					if(s.getServletClass() != null && s.getServletClass() != "") {
+						servletClass = s.getServletClass();
+						return servletClass;
+					}
+					else { 
+						jspPath = s.getJspFile();
+						return jspPath;
+					}
 				}
 			}
 		}
 
-		return servletClass;
+		return null;
 	}
 
 	/**
@@ -238,6 +253,40 @@ public class MyCoyoteService {
 			Method execMethod = servletInstance.getClass().getMethod("exec", Socket.class, String.class, String.class, Map.class);
 
 			response = (String) execMethod.invoke(servletInstance, client, header, httpMethod, mapParams);
+			
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException
+				| SecurityException | IllegalArgumentException | InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return response;
+	}
+	
+	/**
+	 * Permet d'exécuter Jasper si on a une JSP
+	 * 
+	 * @param servletClassName
+	 * @param client
+	 * @param header
+	 * @param httpMethod
+	 * @param mapParams
+	 * @return
+	 */
+	public String invokeServletWithJsp(String jspPath, Socket client, String header, String httpMethod,
+			Map<String, String> mapParams) {
+		
+		String response = "";
+		Class<?> servletClass;
+		
+		try {
+			servletClass = Class.forName("com.cgi.myCatalina.GenericJspServlet");
+
+			Object servletInstance = servletClass.newInstance();
+
+			Method execMethod = servletInstance.getClass().getMethod("exec", Socket.class, String.class, String.class, Map.class, String.class);
+
+			response = (String) execMethod.invoke(servletInstance, client, header, httpMethod, mapParams, jspPath);
 			
 		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException
 				| SecurityException | IllegalArgumentException | InvocationTargetException e) {

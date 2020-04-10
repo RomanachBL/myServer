@@ -11,6 +11,9 @@ public class Servlet {
 	
 	@XmlElement(name = "servlet-class")
 	private String className;
+	
+	@XmlElement(name = "jsp-file")
+	private String jspPath;
 
 	public Servlet() {
 		super();
@@ -37,6 +40,14 @@ public class Servlet {
 
 	public void setServletClass(String servletClass) {
 		this.className = servletClass;
+	}
+
+	public String getJspFile() {
+		return jspPath;
+	}
+
+	public void setJspFile(String jspFile) {
+		this.jspPath = jspFile;
 	}
 
 	@Override
